@@ -126,6 +126,50 @@ class Dataset:
         }
         return pd.DataFrame.from_dict(data, orient="index", columns=self.features)
 
+    def dropna(self):
+        """Remove rows with any NaN in X and sync y; return self."""
+        mask_valid = ~np.isnan(self.X).any(axis=1)  # rows without NaN
+        self.X = self.X[mask_valid]                 # keep valid rows in X
+        if self.y is not None:
+            self.y = self.y[mask_valid]             # keep corresponding y rows
+        return self
+
+    def fillna(self, value: Union[float, str]):
+        """Fill NaNs in X with a scalar or per-feature mean/median; return self."""
+        if isinstance(value, (int, float)):
+            v = float(value)                         # scalar replacement
+            nan_mask = np.isnan(self.X)              # locate NaNs
+            if nan_mask.any():
+                self.X[nan_mask] = v                 # replace all NaNs with scalar
+            return self
+        if value == 'mean':
+            col_means = np.nanmean(self.X, axis=0)   # per-feature means (ignore NaN)
+            nan_mask = np.isnan(self.X)
+            if nan_mask.any():
+                # replace NaN with mean of its feature column
+                self.X[nan_mask] = np.take(col_means, np.where(nan_mask)[1])
+            return self
+        if value == 'median':
+            col_medians = np.nanmedian(self.X, axis=0)  # per-feature medians
+            nan_mask = np.isnan(self.X)
+            if nan_mask.any():
+                # replace NaN with median of its feature column
+                self.X[nan_mask] = np.take(col_medians, np.where(nan_mask)[1])
+            return self
+        raise ValueError("value must be a float, 'mean', or 'median'")
+
+    def remove_by_index(self, index: int):
+        """Remove one row by index from X (and y if present); return self."""
+        n = self.X.shape[0]
+        if index < 0 or index >= n:
+            raise IndexError('index out of range')
+        keep = np.ones(n, dtype=bool)                # mask to keep all rows
+        keep[index] = False                           # drop the chosen row
+        self.X = self.X[keep]                         # update X
+        if self.y is not None:
+            self.y = self.y[keep]                    # update y accordingly
+        return self
+
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, label: str = None):
         """
