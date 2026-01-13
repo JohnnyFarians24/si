@@ -20,14 +20,17 @@ class Dataset:
         label: str (1)
             The label name
         """
+        # Validate and normalize inputs
         if X is None:
             raise ValueError("X cannot be None")
         if y is not None and len(X) != len(y):
             raise ValueError("X and y must have the same length")
         if features is not None and len(X[0]) != len(features):
             raise ValueError("Number of features must match the number of columns in X")
+        # Auto-generate feature names when missing
         if features is None:
             features = [f"feat_{str(i)}" for i in range(X.shape[1])]
+        # Default label name when y is provided
         if y is not None and label is None:
             label = "y"
         self.X = X
@@ -42,6 +45,7 @@ class Dataset:
         -------
         tuple (n_samples, n_features)
         """
+        # Shape is (rows=samples, cols=features)
         return self.X.shape
 
     def has_label(self) -> bool:
@@ -51,6 +55,7 @@ class Dataset:
         -------
         bool
         """
+        # y exists when dataset is labeled
         return self.y is not None
 
     def get_classes(self) -> np.ndarray:
@@ -61,6 +66,7 @@ class Dataset:
         numpy.ndarray (n_classes)
         """
         if self.has_label():
+            # Unique values present in y
             return np.unique(self.y)
         else:
             raise ValueError("Dataset does not have a label")
@@ -72,6 +78,7 @@ class Dataset:
         -------
         numpy.ndarray (n_features)
         """
+        # NaN-safe column means
         return np.nanmean(self.X, axis=0)
 
     def get_variance(self) -> np.ndarray:
@@ -81,6 +88,7 @@ class Dataset:
         -------
         numpy.ndarray (n_features)
         """
+        # NaN-safe column variances
         return np.nanvar(self.X, axis=0)
 
     def get_median(self) -> np.ndarray:
@@ -90,6 +98,7 @@ class Dataset:
         -------
         numpy.ndarray (n_features)
         """
+        # NaN-safe column medians
         return np.nanmedian(self.X, axis=0)
 
     def get_min(self) -> np.ndarray:
@@ -99,6 +108,7 @@ class Dataset:
         -------
         numpy.ndarray (n_features)
         """
+        # NaN-safe column minima
         return np.nanmin(self.X, axis=0)
 
     def get_max(self) -> np.ndarray:
@@ -108,6 +118,7 @@ class Dataset:
         -------
         numpy.ndarray (n_features)
         """
+        # NaN-safe column maxima
         return np.nanmax(self.X, axis=0)
 
     def summary(self) -> pd.DataFrame:
@@ -117,6 +128,7 @@ class Dataset:
         -------
         pandas.DataFrame (n_features, 5)
         """
+        # Aggregate descriptive stats into a DataFrame
         data = {
             "mean": self.get_mean(),
             "median": self.get_median(),
@@ -128,10 +140,13 @@ class Dataset:
 
     def dropna(self):
         """Remove rows with any NaN in X and sync y; return self."""
+        # Build a mask of rows without any NaN
         mask_valid = ~np.isnan(self.X).any(axis=1)  # rows without NaN
-        self.X = self.X[mask_valid]                 # keep valid rows in X
+        # Keep only valid rows in X
+        self.X = self.X[mask_valid]
         if self.y is not None:
-            self.y = self.y[mask_valid]             # keep corresponding y rows
+            # Apply same mask to y to preserve alignment
+            self.y = self.y[mask_valid]
         return self
 
     def fillna(self, value: Union[float, str]):
@@ -140,7 +155,8 @@ class Dataset:
             v = float(value)                         # scalar replacement
             nan_mask = np.isnan(self.X)              # locate NaNs
             if nan_mask.any():
-                self.X[nan_mask] = v                 # replace all NaNs with scalar
+                # Replace all NaNs with the provided scalar
+                self.X[nan_mask] = v
             return self
         if value == 'mean':
             col_means = np.nanmean(self.X, axis=0)   # per-feature means (ignore NaN)
@@ -165,9 +181,11 @@ class Dataset:
             raise IndexError('index out of range')
         keep = np.ones(n, dtype=bool)                # mask to keep all rows
         keep[index] = False                           # drop the chosen row
-        self.X = self.X[keep]                         # update X
+        # Filter X by the keep mask
+        self.X = self.X[keep]
         if self.y is not None:
-            self.y = self.y[keep]                    # update y accordingly
+            # Apply same mask to y to keep alignment
+            self.y = self.y[keep]
         return self
 
     @classmethod

@@ -33,14 +33,14 @@ class RandomForestClassifier(Model):
         super().__init__(**kwargs)
         if n_estimators <= 0:
             raise ValueError("n_estimators must be positive")
-        self.n_estimators = int(n_estimators)
-        self.max_features = max_features
-        self.min_sample_split = min_sample_split
-        self.max_depth = max_depth
-        self.mode = mode
-        self.seed = seed
+        self.n_estimators = int(n_estimators)  # number of trees
+        self.max_features = max_features  # features per tree (None -> sqrt)
+        self.min_sample_split = min_sample_split  # tree split min samples
+        self.max_depth = max_depth  # maximum tree depth
+        self.mode = mode  # impurity: 'gini' or 'entropy'
+        self.seed = seed  # RNG seed
 
-        self.trees: List[Tuple[np.ndarray, DecisionTreeClassifier]] = []
+        self.trees: List[Tuple[np.ndarray, DecisionTreeClassifier]] = []  # (feature_indices, tree)
 
     def _fit(self, dataset: Dataset) -> 'RandomForestClassifier':
         if dataset is None or dataset.X is None or dataset.y is None:
@@ -66,7 +66,7 @@ class RandomForestClassifier(Model):
             # Feature subsampling (without replacement)
             feature_indices = rng.choice(n_features, size=max_features, replace=False)
 
-            # Build bootstrap subset dataset
+            # Build bootstrap subset dataset (rows + selected features)
             X_boot = dataset.X[sample_indices][:, feature_indices]
             y_boot = dataset.y[sample_indices]
             features = None

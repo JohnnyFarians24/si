@@ -11,10 +11,10 @@ def tanimoto_similarity(x, y):
     distances : ndarray (n_samples,) = 1 - (|A ∩ B| / |A ∪ B|);
         empty union (both all zeros) gives distance 0.
     """
-    # Convert inputs to ndarray
+    # Convert inputs to numpy arrays
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
-    # Validate dimensionality
+    # Check expected dimensions
     if x_arr.ndim != 1:
         raise ValueError("x must be 1D")
     if y_arr.ndim != 2:
@@ -22,28 +22,28 @@ def tanimoto_similarity(x, y):
     if y_arr.shape[1] != x_arr.shape[0]:
         raise ValueError("Feature dimension mismatch between x and y")
 
-    # Cast to boolean (treat non‑zero as True)
+    # Cast to boolean (non-zero -> True)
     x_bool = x_arr.astype(bool)
     y_bool = y_arr.astype(bool)
 
-    # Intersection counts per row (logical AND then sum)
+    # Intersection count per row: AND then sum
     intersection = np.sum(y_bool & x_bool, axis=1)
     # Individual set sizes
     x_sum = np.sum(x_bool)
     y_sum = np.sum(y_bool, axis=1)
-    # Union count formula: |A| + |B| - |A∩B|
+    # Union size: |A| + |B| - |A∩B|
     union = x_sum + y_sum - intersection
 
-    # Allocate similarity array
+    # Allocate similarity result
     similarity = np.empty_like(union, dtype=float)
-    # Identify rows with empty union (both all zeros)
+    # Rows with empty union (both vectors all zeros)
     zero_union_mask = union == 0
-    # Similarity is 1.0 when union is empty
+    # Define similarity for empty union as 1.0
     similarity[zero_union_mask] = 1.0
     # Regular similarity otherwise
     similarity[~zero_union_mask] = intersection[~zero_union_mask] / union[~zero_union_mask]
 
-    # Convert similarity to distance
+    # Distance = 1 - similarity
     distances = 1.0 - similarity
     return distances
 

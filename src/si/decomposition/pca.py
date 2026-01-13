@@ -22,32 +22,32 @@ class PCA(Transformer):
         super().__init__(**kwargs)
         if n_components <= 0:
             raise ValueError("n_components must be a positive integer")
-        self.n_components = int(n_components)
-        self.mean: Optional[np.ndarray] = None
-        self.components: Optional[np.ndarray] = None
-        self.explained_variance: Optional[np.ndarray] = None
+        self.n_components = int(n_components)  # target dimensionality
+        self.mean: Optional[np.ndarray] = None  # feature-wise mean for centering
+        self.components: Optional[np.ndarray] = None  # principal axes (rows)
+        self.explained_variance: Optional[np.ndarray] = None  # variance ratios
 
     def _fit(self, dataset: Dataset) -> 'PCA':
         X = dataset.X
-        # Center data (subtract feature means)
+        # Center data (subtract column means)
         self.mean = np.mean(X, axis=0)
         X_centered = X - self.mean
         # Covariance matrix (features as columns)
         cov = np.cov(X_centered, rowvar=False)
-        # Eigenvalues / eigenvectors of covariance
+        # Eigen decomposition of covariance
         eigvals, eigvecs = np.linalg.eig(cov)
-        # Remove any tiny imaginary parts from numerical errors
+        # Drop tiny imaginary parts from numeric errors
         eigvals = np.real(eigvals)
         eigvecs = np.real(eigvecs)
-        # Sort components by descending eigenvalue
+        # Sort by descending eigenvalue (variance)
         order = np.argsort(eigvals)[::-1]
         eigvals_sorted = eigvals[order]
         eigvecs_sorted = eigvecs[:, order]
         # Select top n_components
         n = min(self.n_components, eigvecs_sorted.shape[1])
-        # Store principal axes as rows
+        # Store principal axes as rows (components)
         self.components = eigvecs_sorted[:, :n].T
-        # Compute explained variance fraction
+        # Explained variance (fraction per component)
         total_var = np.sum(eigvals_sorted)
         if total_var <= 0:  # handle degenerate case
             self.explained_variance = np.zeros(n)
@@ -59,9 +59,9 @@ class PCA(Transformer):
         if self.components is None or self.mean is None:
             raise ValueError("PCA must be fitted before calling transform().")
         X = dataset.X
-        # Center with stored mean
+        # Center using fitted mean
         X_centered = X - self.mean
-        # Project onto principal axes
+        # Project onto principal axes (linear transform)
         X_reduced = np.dot(X_centered, self.components.T)
         # Name components PC1, PC2, ...
         features: List[str] = [f"PC{i+1}" for i in range(self.components.shape[0])]
